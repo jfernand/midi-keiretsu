@@ -39,3 +39,54 @@ impl MidiEvent {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_note_on() {
+        let event = MidiEvent::parse(&[0x90, 60, 100]);
+        assert!(matches!(event, MidiEvent::NoteOn { pitch: 60, velocity: 100 }));
+    }
+
+    #[test]
+    fn note_on_with_zero_velocity_is_note_off() {
+        let event = MidiEvent::parse(&[0x90, 60, 0]);
+        assert!(matches!(event, MidiEvent::NoteOff { pitch: 60 }));
+    }
+
+    #[test]
+    fn parses_note_off() {
+        let event = MidiEvent::parse(&[0x80, 60, 64]);
+        assert!(matches!(event, MidiEvent::NoteOff { pitch: 60 }));
+    }
+
+    #[test]
+    fn respects_channel_nibble() {
+        // Note On, channel 5 (0x95) should still be recognized as NoteOn.
+        let event = MidiEvent::parse(&[0x95, 60, 100]);
+        assert!(matches!(event, MidiEvent::NoteOn { pitch: 60, velocity: 100 }));
+    }
+
+    #[test]
+    fn empty_data_is_other() {
+        assert!(matches!(MidiEvent::parse(&[]), MidiEvent::Other));
+    }
+
+    #[test]
+    fn truncated_note_on_is_other() {
+        assert!(matches!(MidiEvent::parse(&[0x90, 60]), MidiEvent::Other));
+    }
+
+    #[test]
+    fn truncated_note_off_is_other() {
+        assert!(matches!(MidiEvent::parse(&[0x80]), MidiEvent::Other));
+    }
+
+    #[test]
+    fn unknown_status_is_other() {
+        // Control Change (0xB0) is not handled yet.
+        assert!(matches!(MidiEvent::parse(&[0xB0, 1, 127]), MidiEvent::Other));
+    }
+}
