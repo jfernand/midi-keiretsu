@@ -59,7 +59,10 @@ mod tests {
 
         // Back near the start of the waveform after one full period.
         let sample = osc.next_sample();
-        assert!(sample.abs() < 0.05, "expected near-zero sample, got {sample}");
+        assert!(
+            sample.abs() < 0.05,
+            "expected near-zero sample, got {sample}"
+        );
     }
 
     #[test]

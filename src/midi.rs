@@ -58,7 +58,13 @@ mod tests {
     #[test]
     fn parses_note_on() {
         let event = MidiEvent::parse(&[0x90, 60, 100]);
-        assert!(matches!(event, MidiEvent::NoteOn { pitch: 60, velocity: 100 }));
+        assert!(matches!(
+            event,
+            MidiEvent::NoteOn {
+                pitch: 60,
+                velocity: 100
+            }
+        ));
     }
 
     #[test]
@@ -77,7 +83,13 @@ mod tests {
     fn respects_channel_nibble() {
         // Note On, channel 5 (0x95) should still be recognized as NoteOn.
         let event = MidiEvent::parse(&[0x95, 60, 100]);
-        assert!(matches!(event, MidiEvent::NoteOn { pitch: 60, velocity: 100 }));
+        assert!(matches!(
+            event,
+            MidiEvent::NoteOn {
+                pitch: 60,
+                velocity: 100
+            }
+        ));
     }
 
     #[test]
@@ -98,12 +110,18 @@ mod tests {
     #[test]
     fn unknown_status_is_other() {
         // Control Change (0xB0) is not handled yet.
-        assert!(matches!(MidiEvent::parse(&[0xB0, 1, 127]), MidiEvent::Other));
+        assert!(matches!(
+            MidiEvent::parse(&[0xB0, 1, 127]),
+            MidiEvent::Other
+        ));
     }
 
     #[test]
     fn note_on_encodes_to_bytes() {
-        let event = MidiEvent::NoteOn { pitch: 60, velocity: 100 };
+        let event = MidiEvent::NoteOn {
+            pitch: 60,
+            velocity: 100,
+        };
         assert_eq!(event.to_bytes(), Some([0x90, 60, 100]));
     }
 
@@ -120,7 +138,10 @@ mod tests {
 
     #[test]
     fn note_on_round_trips_through_bytes() {
-        let original = MidiEvent::NoteOn { pitch: 60, velocity: 100 };
+        let original = MidiEvent::NoteOn {
+            pitch: 60,
+            velocity: 100,
+        };
         let bytes = original.to_bytes().unwrap();
         assert_eq!(MidiEvent::parse(&bytes), original);
     }

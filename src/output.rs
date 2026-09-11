@@ -1,7 +1,7 @@
-use rodio::Source;
 use crate::engine::SynthEngine;
 use crate::midi::MidiEvent;
 use crossbeam_channel::Receiver;
+use rodio::Source;
 use std::time::Duration;
 
 pub struct SynthSource {

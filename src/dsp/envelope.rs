@@ -23,7 +23,13 @@ pub struct Envelope {
 }
 
 impl Envelope {
-    pub fn new(sample_rate: f32, attack: f32, decay: f32, sustain_level: f32, release: f32) -> Self {
+    pub fn new(
+        sample_rate: f32,
+        attack: f32,
+        decay: f32,
+        sustain_level: f32,
+        release: f32,
+    ) -> Self {
         Self {
             sample_rate,
             attack: attack.max(1e-6),
@@ -103,7 +109,10 @@ mod tests {
         let mut last = 0.0;
         for _ in 0..10 {
             let sample = env.next_sample();
-            assert!(sample >= last, "envelope should be non-decreasing during attack");
+            assert!(
+                sample >= last,
+                "envelope should be non-decreasing during attack"
+            );
             last = sample;
         }
         assert!((last - 1.0).abs() < 1e-3);

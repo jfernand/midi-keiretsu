@@ -12,18 +12,18 @@ use std::collections::HashSet;
 /// ```
 pub fn key_to_pitch(key: Key) -> Option<u8> {
     match key {
-        Key::KeyZ => Some(60), // C4
-        Key::KeyS => Some(61), // C#4
-        Key::KeyX => Some(62), // D4
-        Key::KeyD => Some(63), // D#4
-        Key::KeyC => Some(64), // E4
-        Key::KeyV => Some(65), // F4
-        Key::KeyG => Some(66), // F#4
-        Key::KeyB => Some(67), // G4
-        Key::KeyH => Some(68), // G#4
-        Key::KeyN => Some(69), // A4
-        Key::KeyJ => Some(70), // A#4
-        Key::KeyM => Some(71), // B4
+        Key::KeyZ => Some(60),  // C4
+        Key::KeyS => Some(61),  // C#4
+        Key::KeyX => Some(62),  // D4
+        Key::KeyD => Some(63),  // D#4
+        Key::KeyC => Some(64),  // E4
+        Key::KeyV => Some(65),  // F4
+        Key::KeyG => Some(66),  // F#4
+        Key::KeyB => Some(67),  // G4
+        Key::KeyH => Some(68),  // G#4
+        Key::KeyN => Some(69),  // A4
+        Key::KeyJ => Some(70),  // A#4
+        Key::KeyM => Some(71),  // B4
         Key::Comma => Some(72), // C5
         _ => None,
     }
@@ -48,7 +48,10 @@ impl KeyboardState {
             EventType::KeyPress(key) => {
                 let pitch = key_to_pitch(key)?;
                 if self.held.insert(pitch) {
-                    Some(MidiEvent::NoteOn { pitch, velocity: VELOCITY })
+                    Some(MidiEvent::NoteOn {
+                        pitch,
+                        velocity: VELOCITY,
+                    })
                 } else {
                     None
                 }
@@ -72,7 +75,11 @@ mod tests {
     use std::time::SystemTime;
 
     fn key_event(event_type: EventType) -> Event {
-        Event { time: SystemTime::now(), name: None, event_type }
+        Event {
+            time: SystemTime::now(),
+            name: None,
+            event_type,
+        }
     }
 
     #[test]
@@ -105,7 +112,13 @@ mod tests {
     fn press_emits_note_on() {
         let mut state = KeyboardState::new();
         let event = state.on_key_event(&key_event(EventType::KeyPress(Key::KeyZ)));
-        assert_eq!(event, Some(MidiEvent::NoteOn { pitch: 60, velocity: VELOCITY }));
+        assert_eq!(
+            event,
+            Some(MidiEvent::NoteOn {
+                pitch: 60,
+                velocity: VELOCITY
+            })
+        );
     }
 
     #[test]
@@ -145,8 +158,20 @@ mod tests {
         let mut state = KeyboardState::new();
         let z_on = state.on_key_event(&key_event(EventType::KeyPress(Key::KeyZ)));
         let x_on = state.on_key_event(&key_event(EventType::KeyPress(Key::KeyX)));
-        assert_eq!(z_on, Some(MidiEvent::NoteOn { pitch: 60, velocity: VELOCITY }));
-        assert_eq!(x_on, Some(MidiEvent::NoteOn { pitch: 62, velocity: VELOCITY }));
+        assert_eq!(
+            z_on,
+            Some(MidiEvent::NoteOn {
+                pitch: 60,
+                velocity: VELOCITY
+            })
+        );
+        assert_eq!(
+            x_on,
+            Some(MidiEvent::NoteOn {
+                pitch: 62,
+                velocity: VELOCITY
+            })
+        );
 
         let z_off = state.on_key_event(&key_event(EventType::KeyRelease(Key::KeyZ)));
         assert_eq!(z_off, Some(MidiEvent::NoteOff { pitch: 60 }));
@@ -158,7 +183,13 @@ mod tests {
     #[test]
     fn unmapped_key_press_and_release_are_ignored() {
         let mut state = KeyboardState::new();
-        assert_eq!(state.on_key_event(&key_event(EventType::KeyPress(Key::KeyQ))), None);
-        assert_eq!(state.on_key_event(&key_event(EventType::KeyRelease(Key::KeyQ))), None);
+        assert_eq!(
+            state.on_key_event(&key_event(EventType::KeyPress(Key::KeyQ))),
+            None
+        );
+        assert_eq!(
+            state.on_key_event(&key_event(EventType::KeyRelease(Key::KeyQ))),
+            None
+        );
     }
 }
