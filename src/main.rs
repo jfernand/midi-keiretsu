@@ -3,6 +3,7 @@ mod engine;
 mod keyboard_midi;
 mod midi;
 mod output;
+mod virtual_midi;
 
 use crate::midi::MidiEvent;
 use crate::output::SynthSource;
