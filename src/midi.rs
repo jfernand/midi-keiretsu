@@ -8,8 +8,8 @@ pub enum MidiEvent {
 impl MidiEvent {
     /// Encodes this event back into raw MIDI channel-0 bytes.
     /// `Other` has no defined encoding.
-    pub fn to_bytes(&self) -> Option<[u8; 3]> {
-        match *self {
+    pub fn to_bytes(self) -> Option<[u8; 3]> {
+        match self {
             MidiEvent::NoteOn { pitch, velocity } => Some([0x90, pitch, velocity]),
             MidiEvent::NoteOff { pitch } => Some([0x80, pitch, 0]),
             MidiEvent::Other => None,
