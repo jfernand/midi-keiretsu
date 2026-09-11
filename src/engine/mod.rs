@@ -55,3 +55,64 @@ impl SynthEngine {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn note_on_activates_a_voice() {
+        let mut engine = SynthEngine::new(44100.0, 4);
+        engine.handle_event(MidiEvent::NoteOn { pitch: 60, velocity: 100 });
+        assert_eq!(engine.voices.iter().filter(|v| v.is_active).count(), 1);
+    }
+
+    #[test]
+    fn note_off_deactivates_the_matching_voice() {
+        let mut engine = SynthEngine::new(44100.0, 4);
+        engine.handle_event(MidiEvent::NoteOn { pitch: 60, velocity: 100 });
+        engine.handle_event(MidiEvent::NoteOn { pitch: 64, velocity: 100 });
+        engine.handle_event(MidiEvent::NoteOff { pitch: 60 });
+
+        assert_eq!(engine.voices.iter().filter(|v| v.is_active).count(), 1);
+        assert!(engine.voices.iter().any(|v| v.is_active && v.pitch == 64));
+    }
+
+    #[test]
+    fn each_note_on_takes_a_separate_voice_up_to_capacity() {
+        let mut engine = SynthEngine::new(44100.0, 2);
+        engine.handle_event(MidiEvent::NoteOn { pitch: 60, velocity: 100 });
+        engine.handle_event(MidiEvent::NoteOn { pitch: 64, velocity: 100 });
+
+        assert_eq!(engine.voices.iter().filter(|v| v.is_active).count(), 2);
+    }
+
+    #[test]
+    fn steals_a_voice_when_all_are_busy() {
+        let mut engine = SynthEngine::new(44100.0, 1);
+        engine.handle_event(MidiEvent::NoteOn { pitch: 60, velocity: 100 });
+        engine.handle_event(MidiEvent::NoteOn { pitch: 64, velocity: 100 });
+
+        // Only one voice exists, so it must have been stolen for the new note.
+        assert_eq!(engine.voices.len(), 1);
+        assert!(engine.voices[0].is_active);
+        assert_eq!(engine.voices[0].pitch, 64);
+    }
+
+    #[test]
+    fn next_sample_is_silent_with_no_active_voices() {
+        let mut engine = SynthEngine::new(44100.0, 4);
+        assert_eq!(engine.next_sample(), 0.0);
+    }
+
+    #[test]
+    fn next_sample_averages_active_voices() {
+        let mut engine = SynthEngine::new(44100.0, 2);
+        engine.handle_event(MidiEvent::NoteOn { pitch: 69, velocity: 100 });
+        engine.handle_event(MidiEvent::NoteOn { pitch: 69, velocity: 100 });
+
+        // Both voices share the same pitch/phase, so the mix equals either one alone.
+        let mixed = engine.next_sample();
+        assert_eq!(mixed, 0.0); // first sample of a sine oscillator is always 0
+    }
+}
