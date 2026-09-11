@@ -1,0 +1,10 @@
+[package]
+name = "midi"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rodio = "0.20.1"
+midir = "0.10.1"
+crossbeam-channel = "0.5.14"
+thiserror = "2.0.11"
