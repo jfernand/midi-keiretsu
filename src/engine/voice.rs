@@ -1,5 +1,5 @@
 use crate::dsp::envelope::Envelope;
-use crate::dsp::oscillator::SineOscillator;
+use crate::dsp::{Oscillator, OscillatorKind};
 
 const ATTACK_SECONDS: f32 = 0.01;
 const DECAY_SECONDS: f32 = 0.1;
@@ -8,15 +8,15 @@ const RELEASE_SECONDS: f32 = 0.2;
 
 pub struct Voice {
     pub pitch: u8,
-    oscillator: SineOscillator,
+    oscillator: Oscillator,
     envelope: Envelope,
 }
 
 impl Voice {
-    pub fn new(sample_rate: f32) -> Self {
+    pub fn new(sample_rate: f32, oscillator_kind: OscillatorKind) -> Self {
         Self {
             pitch: 0,
-            oscillator: SineOscillator::new(sample_rate),
+            oscillator: oscillator_kind.build(sample_rate),
             envelope: Envelope::new(
                 sample_rate,
                 ATTACK_SECONDS,
@@ -76,14 +76,14 @@ mod tests {
 
     #[test]
     fn new_voice_is_inactive_and_silent() {
-        let mut voice = Voice::new(44100.0);
+        let mut voice = Voice::new(44100.0, OscillatorKind::Sine);
         assert!(!voice.is_active());
         assert_eq!(voice.next_sample(), 0.0);
     }
 
     #[test]
     fn note_on_activates_voice_with_pitch() {
-        let mut voice = Voice::new(44100.0);
+        let mut voice = Voice::new(44100.0, OscillatorKind::Sine);
         voice.note_on(60);
         assert!(voice.is_active());
         assert_eq!(voice.pitch, 60);
@@ -91,7 +91,7 @@ mod tests {
 
     #[test]
     fn note_off_keeps_voice_active_during_release() {
-        let mut voice = Voice::new(44100.0);
+        let mut voice = Voice::new(44100.0, OscillatorKind::Sine);
         voice.note_on(60);
         for _ in 0..100 {
             voice.next_sample();
@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn voice_goes_silent_and_inactive_once_release_completes() {
-        let mut voice = Voice::new(44100.0);
+        let mut voice = Voice::new(44100.0, OscillatorKind::Sine);
         voice.note_on(60);
         for _ in 0..100 {
             voice.next_sample();
@@ -116,5 +116,15 @@ mod tests {
         }
         assert!(!voice.is_active());
         assert_eq!(voice.next_sample(), 0.0);
+    }
+
+    #[test]
+    fn karplus_strong_voice_produces_bounded_sound_after_note_on() {
+        let mut voice = Voice::new(44100.0, OscillatorKind::KarplusStrong);
+        voice.note_on(60);
+        for _ in 0..1000 {
+            let sample = voice.next_sample();
+            assert!((-1.0..=1.0).contains(&sample));
+        }
     }
 }

@@ -1,3 +1,4 @@
+use crate::dsp::OscillatorKind;
 use crate::engine::SynthEngine;
 use crate::midi::MidiEvent;
 use crossbeam_channel::Receiver;
@@ -10,9 +11,14 @@ pub struct SynthSource {
 }
 
 impl SynthSource {
-    pub fn new(sample_rate: u32, num_voices: usize, midi_rx: Receiver<MidiEvent>) -> Self {
+    pub fn new(
+        sample_rate: u32,
+        num_voices: usize,
+        oscillator_kind: OscillatorKind,
+        midi_rx: Receiver<MidiEvent>,
+    ) -> Self {
         Self {
-            engine: SynthEngine::new(sample_rate as f32, num_voices),
+            engine: SynthEngine::new(sample_rate as f32, num_voices, oscillator_kind),
             midi_rx,
         }
     }

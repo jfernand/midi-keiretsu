@@ -5,6 +5,7 @@ mod midi;
 mod output;
 mod virtual_midi;
 
+use crate::dsp::OscillatorKind;
 use crate::midi::MidiEvent;
 use crate::output::SynthSource;
 use crate::virtual_midi::VirtualMidiOut;
@@ -55,10 +56,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("{KEYBOARD_LAYOUT_HINT}");
     }
 
+    let oscillator_kind = prompt_oscillator_kind()?;
+
     let (_stream, stream_handle) = OutputStream::try_default()?;
     let sink = Sink::try_new(&stream_handle)?;
 
-    let source = SynthSource::new(44100, 8, midi_rx);
+    let source = SynthSource::new(44100, 8, oscillator_kind, midi_rx);
     sink.append(source);
 
     println!("\nPress enter to exit ...");
@@ -130,4 +133,18 @@ fn prompt_yes_no(question: &str) -> Result<bool, Box<dyn Error>> {
     let mut input = String::new();
     stdin().read_line(&mut input)?;
     Ok(matches!(input.trim().to_lowercase().as_str(), "y" | "yes"))
+}
+
+fn prompt_oscillator_kind() -> Result<OscillatorKind, Box<dyn Error>> {
+    println!("\nChoose a sound:");
+    println!("1: Sine wave (default)");
+    println!("2: Karplus-Strong plucked string");
+    print!("Selection: ");
+    stdout().flush()?;
+    let mut input = String::new();
+    stdin().read_line(&mut input)?;
+    Ok(match input.trim() {
+        "2" => OscillatorKind::KarplusStrong,
+        _ => OscillatorKind::Sine,
+    })
 }
