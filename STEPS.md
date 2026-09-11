@@ -50,3 +50,39 @@ plucked-string algorithm.
 
 ### Verification Steps
 *   Ran `cargo test`: 23 tests passed.
+
+## [2026-09-11] ADSR Envelope
+
+### Goal
+Give each voice an Attack/Decay/Sustain/Release amplitude envelope so
+notes fade in/out instead of clicking on/off, per the `dsp` module
+described in `ARCHITECTURE.md`.
+
+### Approach
+1.  **Envelope:** Added `dsp/envelope.rs` with a linear-segment ADSR
+    state machine (`Idle -> Attack -> Decay -> Sustain -> Release ->
+    Idle`). `note_off` computes a release rate from whatever level the
+    envelope was at, so releasing early (e.g. mid-decay) still ramps to
+    zero smoothly instead of jumping.
+2.  **Voice integration:** `Voice` now owns an `Envelope` alongside its
+    oscillator and multiplies each sample by the envelope's output.
+    `Voice::is_active` became a method delegating to
+    `Envelope::is_active`, since a voice must stay "active" through its
+    release tail even after `note_off` — it no longer cuts off
+    instantly.
+3.  **Engine:** `SynthEngine` updated to call `voice.is_active()`
+    instead of reading a field; voice assignment/stealing logic is
+    otherwise unchanged.
+
+### Key Decisions
+*   Fixed default envelope times (10ms attack, 100ms decay, 70%
+    sustain, 200ms release) live as constants in `voice.rs` rather than
+    being configurable yet — no UI/parameter system exists to expose
+    them.
+*   Linear segments (not exponential) for simplicity; matches the
+    "basic" scope of the current implementation.
+
+### Verification Steps
+*   Ran `cargo test`: 31 tests passed.
+*   Ran `cargo clippy --all-targets`: no new warnings (only the
+    pre-existing unused `sample_rate`/`velocity` fields).
