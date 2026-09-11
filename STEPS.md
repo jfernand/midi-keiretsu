@@ -86,3 +86,78 @@ described in `ARCHITECTURE.md`.
 *   Ran `cargo test`: 31 tests passed.
 *   Ran `cargo clippy --all-targets`: no new warnings (only the
     pre-existing unused `sample_rate`/`velocity` fields).
+
+## [2026-09-11] Computer-Keyboard MIDI Controller
+
+### Goal
+Let the computer keyboard emulate a MIDI controller: typing on it
+plays this synth directly, and also exposes a real virtual MIDI port
+that other software (DAWs, `aconnect`/`amidi`, Audio MIDI Setup) can
+see and receive from — not just an internal shortcut.
+
+### Approach
+1.  **Encoding:** Added `MidiEvent::to_bytes` (`midi.rs`) to encode
+    `NoteOn`/`NoteOff` back into raw channel-0 MIDI bytes, and derived
+    `Clone, Copy, PartialEq, Eq` on `MidiEvent` so one event can be
+    fanned out to two consumers (this app's engine and the virtual
+    port). Took `self` by value per clippy's `wrong_self_convention`
+    since `MidiEvent` is `Copy`.
+2.  **Keyboard mapping:** Added `keyboard_midi.rs` — a pure
+    `key_to_pitch` function (fixed one-octave layout: `Z X C V B N M ,`
+    for white keys from C4, `S D G H J` for the black keys above them)
+    and `KeyboardState`, which tracks currently-held pitches to turn
+    raw `rdev` press/release events into exactly one `NoteOn`/`NoteOff`
+    per physical press/release (ignoring OS key-repeat and stray
+    duplicate releases). No OS hooks in this module, so it's fully
+    unit-tested with synthetic `rdev::Event` values.
+3.  **Virtual MIDI bridge:** Added `virtual_midi.rs` — `VirtualMidiOut`
+    wraps a `midir` virtual output port ("Keyboard Synth"), and
+    `spawn_keyboard_listener` runs `rdev::listen` on its own thread
+    (it blocks forever and has no shutdown handle), feeding events
+    through `KeyboardState` and sending each resulting `MidiEvent` on
+    both the app's `midi_tx` channel and, if present, the virtual port.
+4.  **Wiring:** `main.rs` no longer hard-errors when no hardware MIDI
+    port exists — it now prompts to enable the keyboard controller
+    instead, only erroring if both are unavailable. Enabling it tries
+    to create the virtual port, warns and continues without one on
+    failure (e.g. Windows, or a Linux/macOS permission issue), then
+    spawns the listener and prints the key-layout hint.
+5.  **Dependency:** Added `rdev = "0.5.3"` (needed for genuine OS-level
+    key-press/key-release events — terminal raw-mode release events
+    are unreliable, especially broken on Linux terminals). Added it,
+    plus the already-in-use `midir` and `crossbeam-channel`, to
+    `AGENTS.md`'s "Pre-approved dependencies" list, which had gone
+    stale.
+
+### Key Decisions
+*   Octave-shift keys were deliberately deferred — one fixed octave
+    ships first to keep the change small; a natural follow-up.
+*   Virtual-port creation and keyboard-listener start failures degrade
+    gracefully (a printed warning) rather than aborting, so the app
+    still runs keyboard-to-local-synth even on Windows or without the
+    right OS permissions.
+*   Skipped a `KeyboardListenerError` (`thiserror`) type: `rdev::listen`'s
+    failure surfaces asynchronously inside its own thread and is never
+    propagated as a `Result` to a caller, so wrapping it would just be
+    unused ceremony — it's logged directly with `{:?}` instead.
+    `VirtualMidiError` *is* a real `thiserror` type, since
+    `VirtualMidiOut::new`/`send` do return `Result`s to callers.
+
+### Verification Steps
+*   Ran `cargo test`: 46 tests passed (new `midi.rs` encoding/round-trip
+    tests and `keyboard_midi.rs` mapping/edge-detection tests).
+*   Ran `cargo clippy --all-targets`: no new warnings.
+*   Ran `cargo fmt`.
+*   Manual verification (not run in this session — requires a real
+    keyboard/OS session and, for the virtual-port check, another MIDI
+    app):
+    1.  Run the app, opt into keyboard mode, confirm the key-layout
+        hint prints.
+    2.  Press/hold/release mapped keys; confirm correct note on/off
+        audio with no repeat-triggering while a key is held.
+    3.  Linux: `aconnect -l` / `amidi -l` in another terminal while the
+        app runs should show a "Keyboard Synth" port.
+    4.  macOS: Audio MIDI Setup / a DAW's MIDI input list should show
+        the same port.
+    5.  Confirm hardware MIDI input still works unaffected when
+        keyboard mode is declined.
