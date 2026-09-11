@@ -17,7 +17,7 @@ Your initial list covers the core pillars of a synthesizer. To build a robust an
 #### 3. `dsp` (Digital Signal Processing - The "Sound Maker")
 *   **Role:** The math-heavy part that generates the actual samples.
 *   **Oscillators:** Not just Sine, but also Square, Saw, and Triangle. Implementing harmonics often involves "Additive Synthesis" (stacking sines) or "Subtractive Synthesis" (filtering rich waveforms).
-*   **Karplus-Strong:** A physical-modeling algorithm for plucked-string/percussive timbres — feed a short burst of noise into a delay line with feedback and a low-pass/averaging filter, and the resonant loop reads back as a decaying plucked string. See Kevin Karplus and Alex Strong, "Digital Synthesis of Plucked-String and Drum Timbres," *Computer Music Journal* 7(2), 1983 (paper: [`docs/papers/karplus-strong-1983.pdf`](docs/papers/karplus-strong-1983.pdf)).
+*   **Karplus-Strong:** Implemented in `dsp/karplus_strong.rs` — a physical-modeling algorithm for plucked-string/percussive timbres. Each "pluck" (`set_frequency`) seeds a delay line with a short noise burst; each sample is read back and replaced with the average of itself and its neighbor, a lossy filter that gives the characteristic decaying pluck. See Kevin Karplus and Alex Strong, "Digital Synthesis of Plucked-String and Drum Timbres," *Computer Music Journal* 7(2), 1983 (paper: [`docs/papers/karplus-strong-1983.pdf`](docs/papers/karplus-strong-1983.pdf)). Selectable alongside the sine oscillator via `dsp::OscillatorKind`.
 *   **Envelopes (ADSR):** Attack, Decay, Sustain, and Release. This is crucial for making the sound feel like an instrument rather than just a constant beep.
 *   **Filters:** A Low-Pass Filter (LPF) is standard for shaping the harmonics you mentioned.
 
@@ -52,8 +52,9 @@ src/
 │   ├── mod.rs
 │   └── voice.rs
 ├── dsp/             # Math and signal generation
-│   ├── mod.rs
+│   ├── mod.rs       # OscillatorKind/Oscillator selector
 │   ├── oscillator.rs
+│   ├── karplus_strong.rs
 │   ├── envelope.rs
 │   └── filter.rs
 └── output.rs        # Rodio Source implementation
