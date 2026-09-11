@@ -49,4 +49,6 @@ This document outlines the best practices and organizational principles for AI a
 ## Pre-approved dependencies
 *   **rodio:** For audio playback and processing.
 *   **thiserror:** For defining custom error types.
-* 
+*   **midir:** For real-time MIDI input/output, including virtual MIDI ports.
+*   **crossbeam-channel:** For thread-safe communication between the MIDI/keyboard and audio threads.
+*   **rdev:** For OS-level keyboard press/release event capture (computer-keyboard MIDI controller).

@@ -26,6 +26,11 @@ Your initial list covers the core pillars of a synthesizer. To build a robust an
 *   **Implementation:** In `rodio`, you'll likely implement the `Source` trait for your `SynthEngine`. This trait requires a `next()` method that returns the next audio sample (`f32` or `i16`).
 *   **Sync:** This is where the "pull" happens—the audio hardware asks for samples, and your synth must provide them in real-time.
 
+#### 5. `keyboard_midi` / `virtual_midi` (Computer Keyboard as MIDI Controller)
+*   **Role:** Lets the computer keyboard stand in for a hardware MIDI controller, without requiring one.
+*   **`keyboard_midi`:** Pure mapping/edge-detection logic — a fixed one-octave key layout (`key_to_pitch`) and `KeyboardState`, which turns raw OS key-press/release events into `MidiEvent::NoteOn`/`NoteOff`, guarding against key-repeat and duplicate releases. No OS hooks here, so it's fully unit-testable.
+*   **`virtual_midi`:** I/O glue — uses `rdev::listen` (on its own thread, since it blocks forever) to capture real key press/release events, and `midir`'s virtual-port support (`os::unix::VirtualOutput`) to expose a real MIDI output port ("Keyboard Synth") that other software (DAWs, `aconnect`/`amidi`, Audio MIDI Setup) can see and receive from. **Linux and macOS only** — `midir` doesn't support virtual ports on Windows; on Windows (or if virtual-port creation otherwise fails), the app degrades to keyboard-driving-the-local-synth-only, with a warning.
+
 ---
 
 ### Other modules/considerations?
@@ -41,6 +46,8 @@ Your initial list covers the core pillars of a synthesizer. To build a robust an
 src/
 ├── main.rs          # Entry point, wire everything together
 ├── midi.rs          # Input handling and event types
+├── keyboard_midi.rs # Computer-keyboard -> MidiEvent mapping and edge-detection
+├── virtual_midi.rs  # rdev listener + midir virtual output port bridge
 ├── engine/          # Voice management and polyphony logic
 │   ├── mod.rs
 │   └── voice.rs
