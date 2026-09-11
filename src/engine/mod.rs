@@ -21,7 +21,7 @@ impl SynthEngine {
         match event {
             MidiEvent::NoteOn { pitch, .. } => {
                 // Find an inactive voice or reuse oldest
-                if let Some(voice) = self.voices.iter_mut().find(|v| !v.is_active) {
+                if let Some(voice) = self.voices.iter_mut().find(|v| !v.is_active()) {
                     voice.note_on(pitch);
                 } else {
                     // Simple replacement: first voice (could be improved to LRU)
@@ -43,7 +43,7 @@ impl SynthEngine {
         let mut mixed = 0.0;
         let mut active_count = 0;
         for voice in self.voices.iter_mut() {
-            if voice.is_active {
+            if voice.is_active() {
                 mixed += voice.next_sample();
                 active_count += 1;
             }
@@ -64,18 +64,34 @@ mod tests {
     fn note_on_activates_a_voice() {
         let mut engine = SynthEngine::new(44100.0, 4);
         engine.handle_event(MidiEvent::NoteOn { pitch: 60, velocity: 100 });
-        assert_eq!(engine.voices.iter().filter(|v| v.is_active).count(), 1);
+        assert_eq!(engine.voices.iter().filter(|v| v.is_active()).count(), 1);
     }
 
     #[test]
-    fn note_off_deactivates_the_matching_voice() {
+    fn note_off_starts_release_but_keeps_voice_active() {
         let mut engine = SynthEngine::new(44100.0, 4);
         engine.handle_event(MidiEvent::NoteOn { pitch: 60, velocity: 100 });
         engine.handle_event(MidiEvent::NoteOn { pitch: 64, velocity: 100 });
         engine.handle_event(MidiEvent::NoteOff { pitch: 60 });
 
-        assert_eq!(engine.voices.iter().filter(|v| v.is_active).count(), 1);
-        assert!(engine.voices.iter().any(|v| v.is_active && v.pitch == 64));
+        // Both voices are still audible: 60 is releasing, 64 is sustaining.
+        assert_eq!(engine.voices.iter().filter(|v| v.is_active()).count(), 2);
+    }
+
+    #[test]
+    fn voice_becomes_inactive_once_release_completes() {
+        let mut engine = SynthEngine::new(44100.0, 4);
+        engine.handle_event(MidiEvent::NoteOn { pitch: 60, velocity: 100 });
+        engine.handle_event(MidiEvent::NoteOn { pitch: 64, velocity: 100 });
+        engine.handle_event(MidiEvent::NoteOff { pitch: 60 });
+
+        // Release is 0.2s at 44.1kHz; run well past that.
+        for _ in 0..20_000 {
+            engine.next_sample();
+        }
+
+        assert!(!engine.voices.iter().any(|v| v.pitch == 60 && v.is_active()));
+        assert!(engine.voices.iter().any(|v| v.pitch == 64 && v.is_active()));
     }
 
     #[test]
@@ -84,7 +100,7 @@ mod tests {
         engine.handle_event(MidiEvent::NoteOn { pitch: 60, velocity: 100 });
         engine.handle_event(MidiEvent::NoteOn { pitch: 64, velocity: 100 });
 
-        assert_eq!(engine.voices.iter().filter(|v| v.is_active).count(), 2);
+        assert_eq!(engine.voices.iter().filter(|v| v.is_active()).count(), 2);
     }
 
     #[test]
@@ -95,7 +111,7 @@ mod tests {
 
         // Only one voice exists, so it must have been stolen for the new note.
         assert_eq!(engine.voices.len(), 1);
-        assert!(engine.voices[0].is_active);
+        assert!(engine.voices[0].is_active());
         assert_eq!(engine.voices[0].pitch, 64);
     }
 
