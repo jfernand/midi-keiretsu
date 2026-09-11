@@ -161,3 +161,54 @@ see and receive from — not just an internal shortcut.
         the same port.
     5.  Confirm hardware MIDI input still works unaffected when
         keyboard mode is declined.
+
+## [2026-09-11] Karplus-Strong Oscillator
+
+### Goal
+Implement the Karplus-Strong plucked-string algorithm (already on the
+`ARCHITECTURE.md` roadmap, paper vendored at
+`docs/papers/karplus-strong-1983.pdf`) as a second, selectable
+oscillator alongside the existing sine wave.
+
+### Approach
+1.  **Algorithm:** Added `dsp/karplus_strong.rs`. `set_frequency`
+    "plucks" the string: it reseeds a delay line (length =
+    `sample_rate / frequency`) with noise from a small in-house
+    xorshift32 PRNG. `next_sample` reads the current sample, writes
+    back the average of it and its neighbor (a lossy averaging
+    filter), and advances — this is what makes the tone naturally
+    decay to silence.
+2.  **Selection:** Added `OscillatorKind` (`Sine` | `KarplusStrong`)
+    and an `Oscillator` enum in `dsp/mod.rs` that dispatches
+    `set_frequency`/`next_sample` to whichever concrete oscillator a
+    voice was built with, so `Voice` no longer depends on
+    `SineOscillator` directly.
+3.  **Wiring:** Threaded `OscillatorKind` through `Voice::new`,
+    `SynthEngine::new`, and `SynthSource::new`, and added a prompt in
+    `main()` ("Choose a sound: 1: Sine wave (default) / 2:
+    Karplus-Strong plucked string") alongside the existing
+    hardware/keyboard MIDI prompts.
+
+### Key Decisions
+*   Wrote a minimal xorshift32 PRNG instead of adding the `rand`
+    crate — one call site (the noise burst) didn't justify a new
+    dependency.
+*   Used an enum (`Oscillator`) rather than a trait object for
+    dispatch, consistent with the project's existing style (no `dyn`
+    usage elsewhere) and avoiding heap allocation per voice.
+*   Oscillator choice is a single global prompt at startup, not
+    per-voice/per-note — matches the current scope; per-note timbre
+    switching would need a bigger redesign (e.g. per-`NoteOn`
+    instrument selection) that isn't needed yet.
+
+### Verification Steps
+*   Ran `cargo test`: 54 tests passed (new `karplus_strong.rs` and
+    `dsp/mod.rs` oscillator-selection tests, plus a `Voice` test
+    confirming bounded output with `OscillatorKind::KarplusStrong`).
+*   Ran `cargo clippy --all-targets`: no new warnings.
+*   Ran `cargo fmt --check`: clean.
+*   Manual verification (not run in this session — requires a real
+    audio/keyboard session): run the app (`cargo run`), select the
+    Karplus-Strong option, and confirm it plays audible
+    plucked-string-like notes that decay naturally, distinct from the
+    sine wave.
