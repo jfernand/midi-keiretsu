@@ -257,3 +257,66 @@ five waveforms selectable.
     select each of the square/sawtooth/triangle options in turn, and
     confirm each sounds distinctly different (buzzier/brighter than
     the sine wave) with correct pitch.
+
+## [2026-09-11] FM Synthesis and Named Instrument Presets
+
+### Goal
+Add FM (phase modulation) as a sixth synthesis technique, and — per
+explicit request — stop exposing raw waveform techniques to the user
+at all: let them pick a named *instrument* ("Electric Piano", "Bell",
+"Plucked String", ...), with the underlying technique and envelope
+as an implementation detail.
+
+### Approach
+1.  **FM oscillator:** Added `dsp/fm.rs`'s `FmOscillator` — a sine
+    carrier whose phase is modulated by a sine modulator running at
+    `modulator_ratio` times the carrier frequency, scaled by
+    `modulation_index`. At index 0 it's mathematically identical to
+    `SineOscillator`; nonzero index adds sidebands (non-integer
+    ratios make them inharmonic), giving brighter or bell-like tones.
+2.  **Wired into technique selection:** Added
+    `OscillatorKind::Fm { modulator_ratio, modulation_index }` /
+    `Oscillator::Fm` (`dsp/mod.rs`). Dropped the `Eq` derive on
+    `OscillatorKind` since it now carries `f32` fields (`PartialEq`
+    only, matching `Envelope`'s existing precedent).
+3.  **Instrument presets:** Added `instrument.rs`'s `Instrument` enum
+    — Sine Pad, Square Lead, Saw Bass, Flute, Plucked String, Electric
+    Piano, Bell — each mapping to a fixed `OscillatorKind` *and* a
+    tuned ADSR. Electric Piano (`ratio: 1.0, index: 2.0`) and Bell
+    (`ratio: 3.5, index: 8.0`) are both FM under the hood, distinguished
+    only by those two numbers; Plucked String wraps Karplus-Strong,
+    with a near-instant attack and full sustain since the delay line
+    itself already provides the natural decay.
+4.  **Rewired the whole chain:** `Voice::new`, `SynthEngine::new`, and
+    `SynthSource::new` now take an `Instrument` instead of an
+    `OscillatorKind` (`Voice` no longer has its own hardcoded ADSR
+    constants at all -- the instrument supplies both oscillator and
+    envelope). `main()`'s prompt now lists instrument names built
+    from `Instrument::ALL`, not raw waveform techniques.
+
+### Key Decisions
+*   `OscillatorKind`/`Oscillator` (the technique layer) stayed exactly
+    where they were architecturally -- `Instrument` sits *above* them
+    as a mapping layer, rather than replacing or duplicating them.
+    Direct technique selection is still fully testable and usable
+    internally; it's just no longer what the user sees.
+*   Tests that looped a fixed sample count past "the release time"
+    (`engine/mod.rs`, `engine/voice.rs`) were loosened from counts
+    tied to one specific release constant (since different
+    instruments now have different, sometimes much longer, releases
+    -- Bell's is 1.5s) to a generously large, instrument-agnostic
+    sample count (200,000) with an updated comment.
+
+### Verification Steps
+*   Ran `cargo test`: 78 tests passed (new `fm.rs`,
+    `dsp::tests::fm_kind_builds_...`, and `instrument.rs` tests,
+    including one iterating `Instrument::ALL` to check every
+    instrument's oscillator stays bounded and every envelope reaches
+    and leaves silence).
+*   Ran `cargo clippy --all-targets`: no new warnings.
+*   Ran `cargo fmt`.
+*   Manual verification (not run in this session): `cargo run`,
+    select each instrument in turn, and confirm Electric Piano and
+    Bell sound like FM (brighter/more complex than a plain sine, Bell
+    audibly inharmonic and long-ringing), and that all seven names
+    print correctly in the selection prompt.

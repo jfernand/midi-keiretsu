@@ -18,9 +18,14 @@ Your initial list covers the core pillars of a synthesizer. To build a robust an
 *   **Role:** The math-heavy part that generates the actual samples.
 *   **Oscillators:** Implemented in `dsp/oscillator.rs` — Sine, Square, Sawtooth, and Triangle, all sharing a `PhaseAccumulator` for frequency/phase bookkeeping and differing only in how they turn a `0.0..1.0` phase into a sample. Implementing harmonics often involves "Additive Synthesis" (stacking sines) or "Subtractive Synthesis" (filtering rich waveforms) — the latter is still open (see Filters below).
 *   **Karplus-Strong:** Implemented in `dsp/karplus_strong.rs` — a physical-modeling algorithm for plucked-string/percussive timbres. Each "pluck" (`set_frequency`) seeds a delay line with a short noise burst; each sample is read back and replaced with the average of itself and its neighbor, a lossy filter that gives the characteristic decaying pluck. See Kevin Karplus and Alex Strong, "Digital Synthesis of Plucked-String and Drum Timbres," *Computer Music Journal* 7(2), 1983 (paper: [`docs/papers/karplus-strong-1983.pdf`](docs/papers/karplus-strong-1983.pdf)).
-*   All five waveforms are selectable at startup via `dsp::OscillatorKind`, which `Voice`/`SynthEngine`/`SynthSource` are built with.
+*   **FM (Phase Modulation):** Implemented in `dsp/fm.rs` — a sine carrier whose phase is modulated by a sine modulator running at some ratio of the carrier frequency, scaled by a modulation index. At index 0 it's a plain sine; higher indices (and non-integer ratios) add sidebands for brighter or bell-like, inharmonic tones, all from simple sine building blocks.
+*   These six techniques (Sine, Square, Sawtooth, Triangle, Karplus-Strong, FM) are unified behind `dsp::OscillatorKind`/`Oscillator`, but a user never picks a technique directly — see `instrument.rs` below.
 *   **Envelopes (ADSR):** Attack, Decay, Sustain, and Release. This is crucial for making the sound feel like an instrument rather than just a constant beep.
 *   **Filters:** A Low-Pass Filter (LPF) is standard for shaping the harmonics you mentioned.
+
+#### 3a. `instrument.rs` (Named Instrument Presets)
+*   **Role:** The user-facing layer above `dsp` — lets someone pick "Electric Piano" or "Bell" instead of reasoning about oscillators and envelopes directly.
+*   **Implementation:** `Instrument` is an enum of named presets (Sine Pad, Square Lead, Saw Bass, Flute, Plucked String, Electric Piano, Bell), each mapping to a fixed `dsp::OscillatorKind` *and* a tuned ADSR (`Envelope`). Electric Piano and Bell are both FM under the hood, distinguished only by modulator ratio/index; Plucked String wraps Karplus-Strong. `Voice`/`SynthEngine`/`SynthSource` are built with an `Instrument`, not a raw oscillator/envelope pair.
 
 #### 4. `audio_output` (The Rodio Bridge)
 *   **Role:** Bridges your DSP code with the hardware via `rodio`.
@@ -47,6 +52,7 @@ Your initial list covers the core pillars of a synthesizer. To build a robust an
 src/
 ├── main.rs          # Entry point, wire everything together
 ├── midi.rs          # Input handling and event types
+├── instrument.rs    # Named Instrument presets (technique + envelope)
 ├── keyboard_midi.rs # Computer-keyboard -> MidiEvent mapping and edge-detection
 ├── virtual_midi.rs  # rdev listener + midir virtual output port bridge
 ├── engine/          # Voice management and polyphony logic
@@ -56,6 +62,7 @@ src/
 │   ├── mod.rs       # OscillatorKind/Oscillator selector
 │   ├── oscillator.rs
 │   ├── karplus_strong.rs
+│   ├── fm.rs
 │   ├── envelope.rs
 │   └── filter.rs
 └── output.rs        # Rodio Source implementation
