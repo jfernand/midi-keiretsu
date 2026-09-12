@@ -11,6 +11,7 @@ Your initial list covers the core pillars of a synthesizer. To build a robust an
 *   **Role:** Manages the "Voices" and state.
 *   **Components:**
     *   **Voice Management:** A polyphonic synth needs to manage multiple "Voices" (instances of your oscillators/envelopes). It needs logic to assign a new `NoteOn` to an available voice and release it on `NoteOff`.
+    *   **Velocity Sensitivity:** `Voice::note_on` derives a linear `velocity_gain` (`velocity / 127`) from the `NoteOn`'s velocity and applies it on top of the oscillator/envelope output, so harder-hit notes play louder. The envelope's own attack/decay/release timing is unaffected by velocity — only output amplitude scales.
     *   **Modulation Matrix:** (Optional but recommended) Connects LFOs (Low Frequency Oscillators) or Envelopes to parameters like pitch or filter cutoff.
 *   **Data Flow:** Receives high-level events from `midi_input` and updates the state of active voices.
 

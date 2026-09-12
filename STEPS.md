@@ -320,3 +320,55 @@ as an implementation detail.
     Bell sound like FM (brighter/more complex than a plain sine, Bell
     audibly inharmonic and long-ringing), and that all seven names
     print correctly in the selection prompt.
+*   Verified end-to-end with a real MIDI note piped through ALSA
+    (`aplaymidi` -> the app's "Midi Through" input): selected Electric
+    Piano and Bell in separate runs, both processed the NoteOn/NoteOff
+    and exited cleanly with no panics or errors. Could not confirm
+    actual audible output from this sandboxed session (no working
+    audio device here); the user manually confirmed both sound
+    correct.
+
+## [2026-09-11] Velocity Sensitivity
+
+### Goal
+Make `NoteOn` velocity (already parsed but previously discarded)
+actually affect loudness, so playing harder produces louder notes.
+
+### Approach
+1.  **`Voice`:** Added a `velocity_gain: f32` field. `note_on` now
+    takes `(pitch, velocity)` and sets `velocity_gain = velocity as
+    f32 / 127.0`; `next_sample` multiplies the oscillator/envelope
+    product by it.
+2.  **`SynthEngine`:** `handle_event`'s `NoteOn` arm now destructures
+    and forwards `velocity` to `voice.note_on(pitch, velocity)`
+    instead of discarding it (`NoteOn { pitch, .. }` -> `NoteOn {
+    pitch, velocity }`).
+
+### Key Decisions
+*   Linear velocity-to-gain mapping (`velocity / 127`), not a
+    perceptual/dB curve -- matches the project's existing "basic"
+    scope; a non-linear curve is a cheap follow-up if the linear one
+    feels off.
+*   Velocity scales output amplitude only, not envelope timing
+    (e.g. a harder hit doesn't get a faster attack). Keeps the
+    change small and orthogonal to the existing ADSR logic; some
+    real synths do vary attack time with velocity, but that's a
+    separate, larger change.
+*   The computer-keyboard controller still sends a fixed velocity
+    (100) per key press, since a typing keyboard has no way to sense
+    how hard a key was struck -- velocity sensitivity is really only
+    meaningful for hardware MIDI controllers with velocity-sensitive
+    keys.
+
+### Verification Steps
+*   Ran `cargo test`: 82 tests passed, including new tests confirming
+    velocity scales output proportionally
+    (`velocity_scales_output_proportionally`), that lower velocity is
+    quieter, that velocity 1 is much quieter than 127, and that
+    `SynthEngine` forwards velocity from `NoteOn` through to output.
+*   Ran `cargo clippy --all-targets`: no new warnings.
+*   Ran `cargo fmt --check`: clean.
+*   Manual verification (not run in this session): `cargo run` with a
+    velocity-sensitive MIDI controller (or a DAW sending varying
+    velocities), and confirm soft vs. hard playing is audibly
+    quieter/louder.
