@@ -1,10 +1,12 @@
 use crate::dsp::Oscillator;
 use crate::dsp::envelope::Envelope;
+use crate::dsp::filter::LowPassFilter;
 use crate::instrument::Instrument;
 
 pub struct Voice {
     pub pitch: u8,
     oscillator: Oscillator,
+    filter: LowPassFilter,
     envelope: Envelope,
     velocity_gain: f32,
 }
@@ -14,6 +16,7 @@ impl Voice {
         Self {
             pitch: 0,
             oscillator: instrument.build_oscillator(sample_rate),
+            filter: instrument.build_filter(sample_rate),
             envelope: instrument.build_envelope(sample_rate),
             velocity_gain: 1.0,
         }
@@ -40,7 +43,8 @@ impl Voice {
 
     pub fn next_sample(&mut self) -> f32 {
         if self.envelope.is_active() {
-            self.oscillator.next_sample() * self.envelope.next_sample() * self.velocity_gain
+            let filtered = self.filter.process(self.oscillator.next_sample());
+            filtered * self.envelope.next_sample() * self.velocity_gain
         } else {
             0.0
         }

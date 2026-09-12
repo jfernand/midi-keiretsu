@@ -1,4 +1,5 @@
 use crate::dsp::envelope::Envelope;
+use crate::dsp::filter::LowPassFilter;
 use crate::dsp::{Oscillator, OscillatorKind};
 
 /// Attack/Decay/Sustain/Release timings for one `Instrument` preset.
@@ -66,6 +67,23 @@ impl Instrument {
         }
     }
 
+    /// Low-pass cutoff frequency in Hz. Harmonically rich waveforms
+    /// (square, sawtooth) get a cutoff low enough to noticeably tame
+    /// their brightness -- classic subtractive synthesis; everything
+    /// else gets a cutoff high enough to leave the tone essentially
+    /// unfiltered.
+    fn filter_cutoff_hz(self) -> f32 {
+        match self {
+            Instrument::SinePad => 18_000.0,
+            Instrument::SquareLead => 6_000.0,
+            Instrument::SawBass => 1_200.0,
+            Instrument::Flute => 8_000.0,
+            Instrument::PluckedString => 12_000.0,
+            Instrument::ElectricPiano => 5_000.0,
+            Instrument::Bell => 18_000.0,
+        }
+    }
+
     fn envelope_params(self) -> EnvelopeParams {
         match self {
             Instrument::SinePad => EnvelopeParams {
@@ -129,6 +147,10 @@ impl Instrument {
             params.sustain,
             params.release,
         )
+    }
+
+    pub fn build_filter(self, sample_rate: f32) -> LowPassFilter {
+        LowPassFilter::new(sample_rate, self.filter_cutoff_hz())
     }
 }
 
@@ -205,6 +227,26 @@ mod tests {
                 modulation_index: 8.0
             }
         );
+    }
+
+    #[test]
+    fn saw_bass_is_filtered_much_darker_than_sine_pad() {
+        assert!(Instrument::SawBass.filter_cutoff_hz() < Instrument::SinePad.filter_cutoff_hz());
+    }
+
+    #[test]
+    fn every_instrument_builds_a_bounded_filter() {
+        for instrument in Instrument::ALL {
+            let mut filter = instrument.build_filter(44100.0);
+            for _ in 0..1000 {
+                let sample = filter.process(1.0);
+                assert!(
+                    (-1.0..=1.0).contains(&sample),
+                    "{} produced an out-of-range filtered sample: {sample}",
+                    instrument.name()
+                );
+            }
+        }
     }
 
     #[test]
