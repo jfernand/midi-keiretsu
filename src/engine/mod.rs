@@ -1,7 +1,7 @@
 pub mod voice;
 
-use crate::dsp::OscillatorKind;
 use crate::engine::voice::Voice;
+use crate::instrument::Instrument;
 use crate::midi::MidiEvent;
 
 pub struct SynthEngine {
@@ -10,10 +10,10 @@ pub struct SynthEngine {
 }
 
 impl SynthEngine {
-    pub fn new(sample_rate: f32, num_voices: usize, oscillator_kind: OscillatorKind) -> Self {
+    pub fn new(sample_rate: f32, num_voices: usize, instrument: Instrument) -> Self {
         let mut voices = Vec::with_capacity(num_voices);
         for _ in 0..num_voices {
-            voices.push(Voice::new(sample_rate, oscillator_kind));
+            voices.push(Voice::new(sample_rate, instrument));
         }
         Self {
             voices,
@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn note_on_activates_a_voice() {
-        let mut engine = SynthEngine::new(44100.0, 4, OscillatorKind::Sine);
+        let mut engine = SynthEngine::new(44100.0, 4, Instrument::SinePad);
         engine.handle_event(MidiEvent::NoteOn {
             pitch: 60,
             velocity: 100,
@@ -76,7 +76,7 @@ mod tests {
 
     #[test]
     fn note_off_starts_release_but_keeps_voice_active() {
-        let mut engine = SynthEngine::new(44100.0, 4, OscillatorKind::Sine);
+        let mut engine = SynthEngine::new(44100.0, 4, Instrument::SinePad);
         engine.handle_event(MidiEvent::NoteOn {
             pitch: 60,
             velocity: 100,
@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn voice_becomes_inactive_once_release_completes() {
-        let mut engine = SynthEngine::new(44100.0, 4, OscillatorKind::Sine);
+        let mut engine = SynthEngine::new(44100.0, 4, Instrument::SinePad);
         engine.handle_event(MidiEvent::NoteOn {
             pitch: 60,
             velocity: 100,
@@ -104,8 +104,8 @@ mod tests {
         });
         engine.handle_event(MidiEvent::NoteOff { pitch: 60 });
 
-        // Release is 0.2s at 44.1kHz; run well past that.
-        for _ in 0..20_000 {
+        // Run well past any instrument's release time.
+        for _ in 0..200_000 {
             engine.next_sample();
         }
 
@@ -115,7 +115,7 @@ mod tests {
 
     #[test]
     fn each_note_on_takes_a_separate_voice_up_to_capacity() {
-        let mut engine = SynthEngine::new(44100.0, 2, OscillatorKind::Sine);
+        let mut engine = SynthEngine::new(44100.0, 2, Instrument::SinePad);
         engine.handle_event(MidiEvent::NoteOn {
             pitch: 60,
             velocity: 100,
@@ -130,7 +130,7 @@ mod tests {
 
     #[test]
     fn steals_a_voice_when_all_are_busy() {
-        let mut engine = SynthEngine::new(44100.0, 1, OscillatorKind::Sine);
+        let mut engine = SynthEngine::new(44100.0, 1, Instrument::SinePad);
         engine.handle_event(MidiEvent::NoteOn {
             pitch: 60,
             velocity: 100,
@@ -148,13 +148,13 @@ mod tests {
 
     #[test]
     fn next_sample_is_silent_with_no_active_voices() {
-        let mut engine = SynthEngine::new(44100.0, 4, OscillatorKind::Sine);
+        let mut engine = SynthEngine::new(44100.0, 4, Instrument::SinePad);
         assert_eq!(engine.next_sample(), 0.0);
     }
 
     #[test]
     fn next_sample_averages_active_voices() {
-        let mut engine = SynthEngine::new(44100.0, 2, OscillatorKind::Sine);
+        let mut engine = SynthEngine::new(44100.0, 2, Instrument::SinePad);
         engine.handle_event(MidiEvent::NoteOn {
             pitch: 69,
             velocity: 100,

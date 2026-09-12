@@ -1,5 +1,5 @@
-use crate::dsp::OscillatorKind;
 use crate::engine::SynthEngine;
+use crate::instrument::Instrument;
 use crate::midi::MidiEvent;
 use crossbeam_channel::Receiver;
 use rodio::Source;
@@ -14,11 +14,11 @@ impl SynthSource {
     pub fn new(
         sample_rate: u32,
         num_voices: usize,
-        oscillator_kind: OscillatorKind,
+        instrument: Instrument,
         midi_rx: Receiver<MidiEvent>,
     ) -> Self {
         Self {
-            engine: SynthEngine::new(sample_rate as f32, num_voices, oscillator_kind),
+            engine: SynthEngine::new(sample_rate as f32, num_voices, instrument),
             midi_rx,
         }
     }

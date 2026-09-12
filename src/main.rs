@@ -6,7 +6,7 @@ mod midi;
 mod output;
 mod virtual_midi;
 
-use crate::dsp::OscillatorKind;
+use crate::instrument::Instrument;
 use crate::midi::MidiEvent;
 use crate::output::SynthSource;
 use crate::virtual_midi::VirtualMidiOut;
@@ -57,12 +57,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("{KEYBOARD_LAYOUT_HINT}");
     }
 
-    let oscillator_kind = prompt_oscillator_kind()?;
+    let instrument = prompt_instrument()?;
 
     let (_stream, stream_handle) = OutputStream::try_default()?;
     let sink = Sink::try_new(&stream_handle)?;
 
-    let source = SynthSource::new(44100, 8, oscillator_kind, midi_rx);
+    let source = SynthSource::new(44100, 8, instrument, midi_rx);
     sink.append(source);
 
     println!("\nPress enter to exit ...");
@@ -136,22 +136,23 @@ fn prompt_yes_no(question: &str) -> Result<bool, Box<dyn Error>> {
     Ok(matches!(input.trim().to_lowercase().as_str(), "y" | "yes"))
 }
 
-fn prompt_oscillator_kind() -> Result<OscillatorKind, Box<dyn Error>> {
-    println!("\nChoose a sound:");
-    println!("1: Sine wave (default)");
-    println!("2: Square wave");
-    println!("3: Sawtooth wave");
-    println!("4: Triangle wave");
-    println!("5: Karplus-Strong plucked string");
+fn prompt_instrument() -> Result<Instrument, Box<dyn Error>> {
+    println!("\nChoose an instrument:");
+    for (i, instrument) in Instrument::ALL.iter().enumerate() {
+        let default_marker = if i == 0 { " (default)" } else { "" };
+        println!("{}: {}{default_marker}", i + 1, instrument.name());
+    }
     print!("Selection: ");
     stdout().flush()?;
     let mut input = String::new();
     stdin().read_line(&mut input)?;
-    Ok(match input.trim() {
-        "2" => OscillatorKind::Square,
-        "3" => OscillatorKind::Sawtooth,
-        "4" => OscillatorKind::Triangle,
-        "5" => OscillatorKind::KarplusStrong,
-        _ => OscillatorKind::Sine,
-    })
+    let selection = input
+        .trim()
+        .parse::<usize>()
+        .ok()
+        .and_then(|n| n.checked_sub(1));
+    Ok(selection
+        .and_then(|i| Instrument::ALL.get(i))
+        .copied()
+        .unwrap_or(Instrument::ALL[0]))
 }

@@ -1,10 +1,6 @@
+use crate::dsp::Oscillator;
 use crate::dsp::envelope::Envelope;
-use crate::dsp::{Oscillator, OscillatorKind};
-
-const ATTACK_SECONDS: f32 = 0.01;
-const DECAY_SECONDS: f32 = 0.1;
-const SUSTAIN_LEVEL: f32 = 0.7;
-const RELEASE_SECONDS: f32 = 0.2;
+use crate::instrument::Instrument;
 
 pub struct Voice {
     pub pitch: u8,
@@ -13,17 +9,11 @@ pub struct Voice {
 }
 
 impl Voice {
-    pub fn new(sample_rate: f32, oscillator_kind: OscillatorKind) -> Self {
+    pub fn new(sample_rate: f32, instrument: Instrument) -> Self {
         Self {
             pitch: 0,
-            oscillator: oscillator_kind.build(sample_rate),
-            envelope: Envelope::new(
-                sample_rate,
-                ATTACK_SECONDS,
-                DECAY_SECONDS,
-                SUSTAIN_LEVEL,
-                RELEASE_SECONDS,
-            ),
+            oscillator: instrument.build_oscillator(sample_rate),
+            envelope: instrument.build_envelope(sample_rate),
         }
     }
 
@@ -76,14 +66,14 @@ mod tests {
 
     #[test]
     fn new_voice_is_inactive_and_silent() {
-        let mut voice = Voice::new(44100.0, OscillatorKind::Sine);
+        let mut voice = Voice::new(44100.0, Instrument::SinePad);
         assert!(!voice.is_active());
         assert_eq!(voice.next_sample(), 0.0);
     }
 
     #[test]
     fn note_on_activates_voice_with_pitch() {
-        let mut voice = Voice::new(44100.0, OscillatorKind::Sine);
+        let mut voice = Voice::new(44100.0, Instrument::SinePad);
         voice.note_on(60);
         assert!(voice.is_active());
         assert_eq!(voice.pitch, 60);
@@ -91,7 +81,7 @@ mod tests {
 
     #[test]
     fn note_off_keeps_voice_active_during_release() {
-        let mut voice = Voice::new(44100.0, OscillatorKind::Sine);
+        let mut voice = Voice::new(44100.0, Instrument::SinePad);
         voice.note_on(60);
         for _ in 0..100 {
             voice.next_sample();
@@ -104,14 +94,14 @@ mod tests {
 
     #[test]
     fn voice_goes_silent_and_inactive_once_release_completes() {
-        let mut voice = Voice::new(44100.0, OscillatorKind::Sine);
+        let mut voice = Voice::new(44100.0, Instrument::SinePad);
         voice.note_on(60);
         for _ in 0..100 {
             voice.next_sample();
         }
         voice.note_off();
-        // Release is 0.2s at 44.1kHz; run well past that.
-        for _ in 0..20_000 {
+        // Run well past any instrument's release time.
+        for _ in 0..200_000 {
             voice.next_sample();
         }
         assert!(!voice.is_active());
@@ -120,7 +110,7 @@ mod tests {
 
     #[test]
     fn karplus_strong_voice_produces_bounded_sound_after_note_on() {
-        let mut voice = Voice::new(44100.0, OscillatorKind::KarplusStrong);
+        let mut voice = Voice::new(44100.0, Instrument::PluckedString);
         voice.note_on(60);
         for _ in 0..1000 {
             let sample = voice.next_sample();
@@ -130,7 +120,7 @@ mod tests {
 
     #[test]
     fn square_voice_produces_bounded_sound_after_note_on() {
-        let mut voice = Voice::new(44100.0, OscillatorKind::Square);
+        let mut voice = Voice::new(44100.0, Instrument::SquareLead);
         voice.note_on(60);
         for _ in 0..1000 {
             let sample = voice.next_sample();
