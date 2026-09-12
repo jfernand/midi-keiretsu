@@ -23,14 +23,14 @@ impl SynthEngine {
 
     pub fn handle_event(&mut self, event: MidiEvent) {
         match event {
-            MidiEvent::NoteOn { pitch, .. } => {
+            MidiEvent::NoteOn { pitch, velocity } => {
                 // Find an inactive voice or reuse oldest
                 if let Some(voice) = self.voices.iter_mut().find(|v| !v.is_active()) {
-                    voice.note_on(pitch);
+                    voice.note_on(pitch, velocity);
                 } else {
                     // Simple replacement: first voice (could be improved to LRU)
                     if !self.voices.is_empty() {
-                        self.voices[0].note_on(pitch);
+                        self.voices[0].note_on(pitch, velocity);
                     }
                 }
             }
@@ -150,6 +150,23 @@ mod tests {
     fn next_sample_is_silent_with_no_active_voices() {
         let mut engine = SynthEngine::new(44100.0, 4, Instrument::SinePad);
         assert_eq!(engine.next_sample(), 0.0);
+    }
+
+    #[test]
+    fn note_on_velocity_scales_engine_output() {
+        let mut loud = SynthEngine::new(44100.0, 1, Instrument::SquareLead);
+        loud.handle_event(MidiEvent::NoteOn {
+            pitch: 60,
+            velocity: 127,
+        });
+
+        let mut quiet = SynthEngine::new(44100.0, 1, Instrument::SquareLead);
+        quiet.handle_event(MidiEvent::NoteOn {
+            pitch: 60,
+            velocity: 32,
+        });
+
+        assert!(quiet.next_sample().abs() < loud.next_sample().abs());
     }
 
     #[test]
