@@ -127,4 +127,14 @@ mod tests {
             assert!((-1.0..=1.0).contains(&sample));
         }
     }
+
+    #[test]
+    fn square_voice_produces_bounded_sound_after_note_on() {
+        let mut voice = Voice::new(44100.0, OscillatorKind::Square);
+        voice.note_on(60);
+        for _ in 0..1000 {
+            let sample = voice.next_sample();
+            assert!((-1.0..=1.0).contains(&sample));
+        }
+    }
 }

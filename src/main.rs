@@ -138,13 +138,19 @@ fn prompt_yes_no(question: &str) -> Result<bool, Box<dyn Error>> {
 fn prompt_oscillator_kind() -> Result<OscillatorKind, Box<dyn Error>> {
     println!("\nChoose a sound:");
     println!("1: Sine wave (default)");
-    println!("2: Karplus-Strong plucked string");
+    println!("2: Square wave");
+    println!("3: Sawtooth wave");
+    println!("4: Triangle wave");
+    println!("5: Karplus-Strong plucked string");
     print!("Selection: ");
     stdout().flush()?;
     let mut input = String::new();
     stdin().read_line(&mut input)?;
     Ok(match input.trim() {
-        "2" => OscillatorKind::KarplusStrong,
+        "2" => OscillatorKind::Square,
+        "3" => OscillatorKind::Sawtooth,
+        "4" => OscillatorKind::Triangle,
+        "5" => OscillatorKind::KarplusStrong,
         _ => OscillatorKind::Sine,
     })
 }
