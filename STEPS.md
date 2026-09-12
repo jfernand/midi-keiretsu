@@ -372,3 +372,63 @@ actually affect loudness, so playing harder produces louder notes.
     velocity-sensitive MIDI controller (or a DAW sending varying
     velocities), and confirm soft vs. hard playing is audibly
     quieter/louder.
+
+## [2026-09-11] Low-Pass Filter
+
+### Goal
+Implement the last unaddressed `dsp` component from `ARCHITECTURE.md`
+("A Low-Pass Filter (LPF) is standard for shaping the harmonics"),
+and use it to give the harmonically-rich instruments (Square Lead,
+Saw Bass) an actual subtractive-synthesis character instead of raw,
+unfiltered waveforms.
+
+### Approach
+1.  **Filter:** Added `dsp/filter.rs`'s `LowPassFilter` — a one-pole
+    (RC) low-pass. `alpha` (how far each sample moves from the
+    previous output towards the current input) is derived from a
+    cutoff frequency and the sample rate; a low cutoff smooths
+    fast-changing input harder, a cutoff near Nyquist leaves the
+    signal almost unchanged.
+2.  **Per-instrument cutoff:** Added `Instrument::filter_cutoff_hz`
+    and `build_filter`. Square Lead (6kHz), Saw Bass (1.2kHz), and
+    Electric Piano (5kHz) get cutoffs low enough to noticeably tame
+    their brightness; the rest (Sine Pad, Flute, Plucked String,
+    Bell) get cutoffs high enough (8-18kHz) to stay essentially
+    unfiltered, since there's little harshness to remove from those
+    tones in the first place.
+3.  **Voice:** Added a `filter: LowPassFilter` field. `next_sample`
+    now filters the raw oscillator output before multiplying by the
+    envelope and velocity gain: `oscillator -> filter -> envelope ->
+    velocity_gain`, matching the conventional subtractive-synthesis
+    signal chain.
+
+### Key Decisions
+*   A one-pole filter, not a resonant multi-pole design (e.g.
+    Moog-style ladder filter with resonance) -- keeps the
+    implementation and its behavior simple to reason about and test,
+    consistent with the project's existing "basic" scope. A resonant
+    filter with a cutoff/resonance envelope is a natural, larger
+    follow-up.
+*   Filter state is not reset on `note_on` -- it persists across
+    notes like the oscillators already do (aside from Karplus-Strong,
+    which deliberately reseeds). A one-pole filter converges within a
+    few time constants, so any carryover from a previous note is
+    inaudible in practice; this also matches how filters behave in
+    real analog/hardware synths, which don't reset per note either.
+*   Filter is applied unconditionally in the signal chain (every
+    `Voice` has one) rather than being optional, since a
+    near-Nyquist cutoff is already indistinguishable from no filter
+    at all -- avoids an `Option<LowPassFilter>` for no real benefit.
+
+### Verification Steps
+*   Ran `cargo test`: 87 tests passed (new `filter.rs` tests --
+    convergence to a constant input, no overshoot, and a low cutoff
+    smoothing an alternating signal more than a high one -- plus
+    `instrument.rs` tests confirming Saw Bass is filtered darker than
+    Sine Pad and that every instrument's filter stays bounded).
+*   Ran `cargo clippy --all-targets`: no new warnings.
+*   Ran `cargo fmt --check`: clean.
+*   Manual verification (not run in this session): `cargo run`,
+    select Saw Bass and Square Lead, and confirm they sound warmer/
+    less harsh than before this change (compare against Sine Pad or
+    Bell, which should sound unchanged).
