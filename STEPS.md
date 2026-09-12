@@ -212,3 +212,48 @@ oscillator alongside the existing sine wave.
     Karplus-Strong option, and confirm it plays audible
     plucked-string-like notes that decay naturally, distinct from the
     sine wave.
+
+## [2026-09-11] Square, Sawtooth, and Triangle Oscillators
+
+### Goal
+Fill out the remaining oscillators from `ARCHITECTURE.md`'s roadmap
+("Not just Sine, but also Square, Saw, and Triangle") and make all
+five waveforms selectable.
+
+### Approach
+1.  **Shared bookkeeping:** Factored `SineOscillator`'s
+    frequency/sample-rate/phase fields and phase-advance logic out
+    into a private `PhaseAccumulator` (`dsp/oscillator.rs`), since all
+    four simple periodic oscillators only differ in how they turn a
+    `0.0..1.0` phase into a sample. `SineOscillator`'s public API is
+    unchanged.
+2.  **New oscillators:** Added `SquareOscillator` (bipolar, 50% duty:
+    `phase < 0.5`), `SawtoothOscillator` (linear ramp `2*phase - 1`),
+    and `TriangleOscillator` (`0 -> 1` over the first quarter-period,
+    down to `-1` by three-quarters, back to `0`).
+3.  **Selection:** Added `Square`, `Sawtooth`, and `Triangle`
+    variants to `OscillatorKind`/`Oscillator` (`dsp/mod.rs`)
+    alongside the existing `Sine`/`KarplusStrong`, and extended
+    `main()`'s sound-selection prompt to list all five.
+
+### Key Decisions
+*   Generalized the existing "completes one period" oscillator test
+    into a shared `assert_returns_to_start_after_one_period` helper
+    (100Hz at 44.1kHz gives an exact 441-sample period), reused by
+    all four phase-accumulator oscillators. Needed a small tolerance
+    (`1e-3`) rather than exact equality for the continuous waveforms
+    (sine/sawtooth/triangle), since `fract()` accumulates tiny
+    floating-point drift over 441 calls — square is insensitive to
+    this since it only compares `phase < 0.5`.
+*   Kept the waveforms unfiltered/aliased (no band-limiting), matching
+    the project's existing "basic" scope; a low-pass filter to tame
+    the raw square/sawtooth harmonics is the next natural `dsp` item.
+
+### Verification Steps
+*   Ran `cargo test`: 67 tests passed.
+*   Ran `cargo clippy --all-targets`: no new warnings.
+*   Ran `cargo fmt`.
+*   Manual verification (not run in this session): `cargo run`,
+    select each of the square/sawtooth/triangle options in turn, and
+    confirm each sounds distinctly different (buzzier/brighter than
+    the sine wave) with correct pitch.
