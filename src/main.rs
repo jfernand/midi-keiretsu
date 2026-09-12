@@ -1,5 +1,6 @@
 mod dsp;
 mod engine;
+mod instrument;
 mod keyboard_midi;
 mod midi;
 mod output;
