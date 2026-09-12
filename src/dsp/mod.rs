@@ -3,17 +3,22 @@ pub mod fm;
 pub mod karplus_strong;
 pub mod oscillator;
 
+use fm::FmOscillator;
 use karplus_strong::KarplusStrongOscillator;
 use oscillator::{SawtoothOscillator, SineOscillator, SquareOscillator, TriangleOscillator};
 
 /// Which waveform-generation algorithm a `Voice` should use.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OscillatorKind {
     Sine,
     Square,
     Sawtooth,
     Triangle,
     KarplusStrong,
+    Fm {
+        modulator_ratio: f32,
+        modulation_index: f32,
+    },
 }
 
 impl OscillatorKind {
@@ -26,6 +31,14 @@ impl OscillatorKind {
             OscillatorKind::KarplusStrong => {
                 Oscillator::KarplusStrong(KarplusStrongOscillator::new(sample_rate))
             }
+            OscillatorKind::Fm {
+                modulator_ratio,
+                modulation_index,
+            } => Oscillator::Fm(FmOscillator::new(
+                sample_rate,
+                modulator_ratio,
+                modulation_index,
+            )),
         }
     }
 }
@@ -38,6 +51,7 @@ pub enum Oscillator {
     Sawtooth(SawtoothOscillator),
     Triangle(TriangleOscillator),
     KarplusStrong(KarplusStrongOscillator),
+    Fm(FmOscillator),
 }
 
 impl Oscillator {
@@ -48,6 +62,7 @@ impl Oscillator {
             Oscillator::Sawtooth(osc) => osc.set_frequency(frequency),
             Oscillator::Triangle(osc) => osc.set_frequency(frequency),
             Oscillator::KarplusStrong(osc) => osc.set_frequency(frequency),
+            Oscillator::Fm(osc) => osc.set_frequency(frequency),
         }
     }
 
@@ -58,6 +73,7 @@ impl Oscillator {
             Oscillator::Sawtooth(osc) => osc.next_sample(),
             Oscillator::Triangle(osc) => osc.next_sample(),
             Oscillator::KarplusStrong(osc) => osc.next_sample(),
+            Oscillator::Fm(osc) => osc.next_sample(),
         }
     }
 }
@@ -102,5 +118,19 @@ mod tests {
         osc.set_frequency(220.0);
         let sample = osc.next_sample();
         assert!((-1.0..=1.0).contains(&sample));
+    }
+
+    #[test]
+    fn fm_kind_builds_a_phase_modulation_oscillator() {
+        let mut osc = OscillatorKind::Fm {
+            modulator_ratio: 3.5,
+            modulation_index: 8.0,
+        }
+        .build(44100.0);
+        osc.set_frequency(220.0);
+        for _ in 0..1000 {
+            let sample = osc.next_sample();
+            assert!((-1.0..=1.0).contains(&sample));
+        }
     }
 }
