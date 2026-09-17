@@ -36,6 +36,26 @@ This document outlines the best practices and organizational principles for AI a
 
 ## Architecture
 * The architecture for this project is described in the ARCHITECTURE.md file.
+* This is a Cargo workspace: `crates/midi-core` is a `no_std` library
+  (the synth engine, DSP, and MIDI event types) and `crates/midi` is
+  the `std`-based desktop app that depends on it. Code in
+  `crates/midi-core` must not use `std` outside `#[cfg(test)]` blocks
+  -- see the "no_std dependencies" note below.
+
+## no_std dependencies (crates/midi-core only)
+*   **libm:** For floating-point math (`sin`, `pow`, `round`, ...)
+    not available on `core::f32`, since `no_std` has no libm linked
+    in by default.
+*   Use `#[cfg(test)]`-gated `std` freely in test code (e.g.
+    `std::collections::HashSet`) -- `#![cfg_attr(not(test), no_std)]`
+    means `cargo test` always links `std` for the test harness
+    regardless of the crate's own attribute, so existing test code
+    needs no porting.
+*   To verify a change to `crates/midi-core` is genuinely `no_std`
+    (not just "doesn't obviously use std"), check it against a
+    bare-metal target, which fails to compile on any std leak:
+    `cargo check -p midi-core --target thumbv6m-none-eabi`.
+    `cargo test` alone cannot catch this.
 
 ## Additional Guidelines
 *   **Version Control:** Use Git for version control.

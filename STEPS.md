@@ -432,3 +432,76 @@ unfiltered waveforms.
     select Saw Bass and Square Lead, and confirm they sound warmer/
     less harsh than before this change (compare against Sine Pad or
     Bell, which should sound unchanged).
+
+## [2026-09-17] Split into a midi-core / midi Workspace, Made midi-core no_std
+
+### Goal
+Pull the synth engine (MIDI event types, `Instrument`, everything
+under `engine/` and `dsp/`) into its own `no_std` library crate, so
+it can be reused outside this desktop app (e.g. embedded in another
+project's build) without dragging in `rodio`/`midir`/`rdev`/std.
+
+### Approach
+Done in two commits, each independently buildable/testable:
+
+1.  **Workspace split (no behavior change):** Moved `midi.rs`,
+    `instrument.rs`, `engine/`, and `dsp/` into a new
+    `crates/midi-core` library crate; left `main.rs`, `output.rs`,
+    `keyboard_midi.rs`, and `virtual_midi.rs` in `crates/midi`, which
+    now depends on `midi-core` via a path dependency. The root
+    `Cargo.toml` became a workspace manifest. Only import paths
+    changed in the app crate (`crate::midi::MidiEvent` ->
+    `midi_core::midi::MidiEvent`, etc.) -- internal `crate::...`
+    references inside the moved modules stayed valid unchanged, since
+    they're all still in the same crate, just renamed. All 87 tests
+    still passed, now split 77 (`midi-core`) / 10 (`midi`,
+    `keyboard_midi.rs`'s tests).
+2.  **no_std port:** Added `#![cfg_attr(not(test), no_std)]` plus
+    `extern crate alloc` to `midi-core`'s `lib.rs`. This attribute
+    form (rather than a bare `#![no_std]`) means `cargo test` still
+    links `std` for the test harness regardless -- every existing
+    `#[cfg(test)]` block, including `instrument.rs`'s
+    `std::collections::HashSet`, needed zero changes. Only 6
+    non-test call sites actually touched `std`:
+    *   `oscillator.rs`/`fm.rs`: `std::f32::consts::PI` -> `core`;
+        `.sin()` -> `libm::sinf`; `.fract()` -> a small `fract()`
+        helper built on `libm::truncf` (exact for the non-negative,
+        `<2.0` phase values these oscillators produce), shared
+        between the two files.
+    *   `karplus_strong.rs`: `Vec<f32>` -> `alloc::vec::Vec<f32>`;
+        `.round()` -> `libm::roundf` (`.max()` stayed --
+        `f32::max` is core-safe).
+    *   `engine/mod.rs`: `Vec<Voice>` -> `alloc::vec::Vec<Voice>`.
+    *   `engine/voice.rs`: `.powf()` -> `libm::powf`.
+    *   `filter.rs`: PI import only, no transcendental calls.
+    `envelope.rs`, `instrument.rs`, and `midi.rs` needed **no
+    changes** -- they only use core-safe f32 methods
+    (`.max()`/`.clamp()`) or pure byte-slice logic.
+
+### Key Decisions
+*   `#![cfg_attr(not(test), no_std)]` over a bare `#![no_std]` --
+    the whole point was to make `no_std` cheap to adopt without
+    rewriting the extensive existing test suite; this is the standard
+    idiom for that.
+*   A tiny in-crate `fract()` helper (subtraction against
+    `libm::truncf`) instead of pulling in a bigger math-helpers
+    dependency for one missing method.
+*   No `std` feature flag on `midi-core` to let it opt back into
+    `std` on host builds -- it's unconditionally `no_std`; a `std`
+    binary (the `midi` app) can depend on a `no_std` library just
+    fine, so there was no need for one.
+
+### Verification Steps
+*   Ran `cargo test --workspace`: all 87 tests passed unchanged
+    (77 in `midi-core`, 10 in `midi`).
+*   Ran `cargo clippy --workspace --all-targets`: no new warnings.
+*   Ran `cargo fmt --check`: clean.
+*   **Proved actual `no_std`-ness** (which `cargo test` alone cannot
+    do, since the test harness always links `std`):
+    `cargo check -p midi-core --target thumbv6m-none-eabi` (bare-metal
+    ARM, no OS at all) and `--target wasm32-unknown-unknown` both
+    succeeded.
+*   Ran the full desktop app (`cargo run -p midi`) end-to-end after
+    the split and confirmed it behaves identically to before (hardware
+    port selection, keyboard-controller prompt, instrument selection,
+    playback all unchanged).
