@@ -1,7 +1,7 @@
-use crate::engine::SynthEngine;
-use crate::instrument::Instrument;
-use crate::midi::MidiEvent;
 use crossbeam_channel::Receiver;
+use midi_core::engine::SynthEngine;
+use midi_core::instrument::Instrument;
+use midi_core::midi::MidiEvent;
 use rodio::Source;
 use std::time::Duration;
 

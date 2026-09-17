@@ -1,6 +1,6 @@
 use crate::keyboard_midi::KeyboardState;
-use crate::midi::MidiEvent;
 use crossbeam_channel::Sender;
+use midi_core::midi::MidiEvent;
 use midir::os::unix::VirtualOutput;
 use midir::{MidiOutput, MidiOutputConnection};
 use thiserror::Error;

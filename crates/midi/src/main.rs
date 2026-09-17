@@ -1,16 +1,12 @@
-mod dsp;
-mod engine;
-mod instrument;
 mod keyboard_midi;
-mod midi;
 mod output;
 mod virtual_midi;
 
-use crate::instrument::Instrument;
-use crate::midi::MidiEvent;
 use crate::output::SynthSource;
 use crate::virtual_midi::VirtualMidiOut;
 use crossbeam_channel::unbounded;
+use midi_core::instrument::Instrument;
+use midi_core::midi::MidiEvent;
 use midir::{Ignore, MidiInput, MidiInputConnection};
 use rodio::{OutputStream, Sink};
 use std::error::Error;

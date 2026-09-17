@@ -1,4 +1,4 @@
-use crate::midi::MidiEvent;
+use midi_core::midi::MidiEvent;
 use rdev::{Event, EventType, Key};
 use std::collections::HashSet;
 

@@ -1,0 +1,12 @@
+[package]
+name = "midi"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+midi-core = { path = "../midi-core" }
+rodio = "0.20.1"
+midir = "0.10.1"
+crossbeam-channel = "0.5.14"
+thiserror = "2.0.11"
+rdev = "0.5.3"
