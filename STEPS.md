@@ -505,3 +505,51 @@ Done in two commits, each independently buildable/testable:
     the split and confirmed it behaves identically to before (hardware
     port selection, keyboard-controller prompt, instrument selection,
     playback all unchanged).
+
+## [2026-09-17] Renamed midi-core to wavesynth, Made It Publish-Ready
+
+### Goal
+Pick a crate name actually available on crates.io (checked: `midi`,
+`synth`, and `synth-core` are all taken; `wavesynth`/`wavesynth-core`
+were free), and finish the metadata/licensing needed to publish it.
+
+### Approach
+1.  **Rename:** `crates/midi-core` -> `crates/wavesynth`, package name
+    `midi-core` -> `wavesynth`, and every `midi_core::` import in the
+    `midi` app crate -> `wavesynth::`. No other changes.
+2.  **Publish-readiness:** Added `description`, `license = "MIT OR
+    Apache-2.0"`, `repository`, `readme`, `keywords`, and `categories`
+    to `crates/wavesynth/Cargo.toml`; added a `README.md` for the
+    crate; added `LICENSE-MIT` and `LICENSE-APACHE` at the repo root
+    (the Rust ecosystem's de facto standard dual license).
+
+### Key Decisions
+*   Dual MIT/Apache-2.0 over a single license, matching near-universal
+    Rust-ecosystem convention -- maximizes compatibility with
+    downstream users' own licensing constraints.
+*   License files at the repo root (not inside `crates/wavesynth/`),
+    using the `license` field's SPDX identifier rather than
+    `license-file` -- this is the standard layout for Rust workspaces
+    where only some member crates are published, and doesn't require
+    Cargo to pull files from outside the crate directory into the
+    published package.
+*   Left the `midi` app crate's package name alone even though `midi`
+    is also taken on crates.io -- it isn't meant to be published (no
+    metadata was added to it either), so the name collision is
+    irrelevant; only path-dependency workspace members need locally
+    unique names, not globally unique ones.
+
+### Verification Steps
+*   Ran `cargo test --workspace`: all 87 tests still passed.
+*   Ran `cargo clippy --workspace --all-targets` and `cargo fmt
+    --check`: clean.
+*   Re-verified `no_std`-ness after the rename:
+    `cargo check -p wavesynth --target thumbv6m-none-eabi` succeeded.
+*   Ran `cargo package -p wavesynth --list` to confirm the packaged
+    file set looks right (all `src/`, `Cargo.toml`, `README.md`, no
+    stray files).
+*   Ran `cargo publish -p wavesynth --dry-run`: packaging, the
+    verification build, and everything short of the actual upload
+    succeeded (the dry run correctly aborts before uploading). Did
+    **not** actually publish -- that's a separate, irreversible step
+    for the user to take when ready.

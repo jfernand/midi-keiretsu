@@ -8,6 +8,7 @@ repository = "https://github.com/jfernand/midi"
 readme = "README.md"
 keywords = ["synthesizer", "midi", "audio", "dsp", "embedded"]
 categories = ["no-std", "multimedia::audio"]
+publish = true
 
 [dependencies]
 libm = "0.2"
