@@ -37,7 +37,7 @@ This document outlines the best practices and organizational principles for AI a
 ## Architecture
 * The architecture for this project is described in the ARCHITECTURE.md file.
 * This is a Cargo workspace: `crates/wavesynth` is a `no_std` library
-  (the synth engine, DSP, and MIDI event types) and `crates/midi` is
+  (the synth engine, DSP, and MIDI event types) and `crates/midi-synth` is
   the `std`-based desktop app that depends on it. Code in
   `crates/wavesynth` must not use `std` outside `#[cfg(test)]` blocks
   -- see the "no_std dependencies" note below.

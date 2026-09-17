@@ -7,7 +7,7 @@ Your initial list covers the core pillars of a synthesizer. To build a robust an
 This is a Cargo workspace with two crates:
 
 *   **`crates/wavesynth`** — a `no_std` library holding everything below that has no I/O dependency: `MidiEvent`, `Instrument`, and everything under `engine/` and `dsp/`. `SynthEngine::{new, handle_event, next_sample}` is its whole public surface for driving the synth: feed it `MidiEvent`s, pull mono `f32` samples in `[-1.0, 1.0]` one at a time. Being `no_std` means it can be embedded in non-desktop targets (a game, an embedded/wasm target, ...) with no dependency on an OS or heap-backed I/O beyond `alloc` (used only for `Vec` in the voice pool and the Karplus-Strong delay line). See `AGENTS.md`'s "no_std dependencies" section for the ground rules when touching this crate.
-*   **`crates/midi`** — the `std`-based desktop app: hardware MIDI input (`midir`), the computer-keyboard-as-MIDI-controller feature (`keyboard_midi.rs`/`virtual_midi.rs`, `rdev`/virtual `midir` ports), and audio playback (`rodio`). Depends on `wavesynth` via a path dependency and is the only crate that knows those library names exist.
+*   **`crates/midi-synth`** — the `std`-based desktop app: hardware MIDI input (`midir`), the computer-keyboard-as-MIDI-controller feature (`keyboard_midi.rs`/`virtual_midi.rs`, `rdev`/virtual `midir` ports), and audio playback (`rodio`). Depends on `wavesynth` via a path dependency and is the only crate that knows those library names exist.
 
 #### 1. `midi_input` (The Dispatcher)
 *   **Role:** Reads MIDI events from a hardware port or a file.
@@ -73,7 +73,7 @@ crates/
 │           ├── fm.rs
 │           ├── envelope.rs
 │           └── filter.rs
-└── midi/                # std desktop app: hardware/keyboard MIDI input, audio output
+└── midi-synth/          # std desktop app: hardware/keyboard MIDI input, audio output
     └── src/
         ├── main.rs          # Entry point, wire everything together
         ├── keyboard_midi.rs # Computer-keyboard -> MidiEvent mapping and edge-detection
