@@ -2,10 +2,16 @@
 name = "midi-synth"
 version = "0.1.0"
 edition = "2024"
-publish = false
+description = "A MIDI-driven desktop synthesizer: play it from a hardware MIDI controller or your computer keyboard (exposed as a real virtual MIDI port), through named instrument presets built on the wavesynth engine."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/jfernand/midi-keiretsu"
+readme = "README.md"
+keywords = ["synthesizer", "midi", "audio", "keyboard", "cli"]
+categories = ["command-line-utilities", "multimedia::audio"]
+publish = true
 
 [dependencies]
-wavesynth = { path = "../wavesynth" }
+wavesynth = { path = "../wavesynth", version = "0.1.0" }
 rodio = "0.20.1"
 midir = "0.10.1"
 crossbeam-channel = "0.5.14"
