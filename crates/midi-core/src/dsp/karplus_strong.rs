@@ -1,3 +1,5 @@
+use alloc::vec::Vec;
+
 /// A Karplus-Strong plucked-string oscillator.
 ///
 /// Physical-modeling synthesis: a short burst of noise is fed into a
@@ -29,7 +31,7 @@ impl KarplusStrongOscillator {
     /// line with noise, sized so the loop takes `sample_rate / frequency`
     /// samples to repeat.
     pub fn set_frequency(&mut self, frequency: f32) {
-        let length = (self.sample_rate / frequency).round().max(2.0) as usize;
+        let length = libm::roundf(self.sample_rate / frequency).max(2.0) as usize;
         self.buffer = (0..length).map(|_| self.next_noise_sample()).collect();
         self.position = 0;
     }

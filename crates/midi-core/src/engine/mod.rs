@@ -3,6 +3,7 @@ pub mod voice;
 use crate::engine::voice::Voice;
 use crate::instrument::Instrument;
 use crate::midi::MidiEvent;
+use alloc::vec::Vec;
 
 pub struct SynthEngine {
     voices: Vec<Voice>,

@@ -1,4 +1,5 @@
-use std::f32::consts::PI;
+use crate::dsp::oscillator::fract;
+use core::f32::consts::PI;
 
 /// A two-operator FM (phase modulation) oscillator: a sine carrier whose
 /// phase is modulated by a sine modulator running at `modulator_ratio`
@@ -32,14 +33,12 @@ impl FmOscillator {
     }
 
     pub fn next_sample(&mut self) -> f32 {
-        let modulator = (2.0 * PI * self.modulator_phase).sin();
-        let sample = (2.0 * PI * self.carrier_phase + self.modulation_index * modulator).sin();
+        let modulator = libm::sinf(2.0 * PI * self.modulator_phase);
+        let sample = libm::sinf(2.0 * PI * self.carrier_phase + self.modulation_index * modulator);
 
-        self.carrier_phase =
-            (self.carrier_phase + self.carrier_frequency / self.sample_rate).fract();
+        self.carrier_phase = fract(self.carrier_phase + self.carrier_frequency / self.sample_rate);
         let modulator_frequency = self.carrier_frequency * self.modulator_ratio;
-        self.modulator_phase =
-            (self.modulator_phase + modulator_frequency / self.sample_rate).fract();
+        self.modulator_phase = fract(self.modulator_phase + modulator_frequency / self.sample_rate);
 
         sample
     }

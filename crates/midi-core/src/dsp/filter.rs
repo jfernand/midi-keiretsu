@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use core::f32::consts::PI;
 
 /// A one-pole (RC) low-pass filter: each output sample moves partway
 /// from the previous output towards the current input, where `alpha`

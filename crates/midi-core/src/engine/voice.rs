@@ -52,7 +52,7 @@ impl Voice {
 }
 
 fn midi_pitch_to_freq(pitch: u8) -> f32 {
-    440.0 * 2.0_f32.powf((pitch as f32 - 69.0) / 12.0)
+    440.0 * libm::powf(2.0, (pitch as f32 - 69.0) / 12.0)
 }
 
 #[cfg(test)]

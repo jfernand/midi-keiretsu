@@ -1,4 +1,12 @@
-use std::f32::consts::PI;
+use core::f32::consts::PI;
+
+/// Equivalent to `f32::fract`, which isn't available in `core`. Only
+/// correct for non-negative `x` less than 2.0 -- true for every phase
+/// value here, since phase is always advanced by less than 1.0 per
+/// sample and wrapped back into `0.0..1.0` immediately.
+pub(crate) fn fract(x: f32) -> f32 {
+    x - libm::truncf(x)
+}
 
 /// Shared phase bookkeeping for the simple periodic oscillators below:
 /// each one only needs to turn a `0.0..1.0` phase into a sample.
@@ -24,7 +32,7 @@ impl PhaseAccumulator {
     /// Returns the current phase and advances it for the next sample.
     fn advance(&mut self) -> f32 {
         let phase = self.phase;
-        self.phase = (self.phase + self.frequency / self.sample_rate).fract();
+        self.phase = fract(self.phase + self.frequency / self.sample_rate);
         phase
     }
 }
@@ -42,7 +50,7 @@ impl SineOscillator {
 
     pub fn next_sample(&mut self) -> f32 {
         let phase = self.0.advance();
-        (2.0 * PI * phase).sin()
+        libm::sinf(2.0 * PI * phase)
     }
 }
 
