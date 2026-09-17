@@ -5,12 +5,12 @@ mod virtual_midi;
 use crate::output::SynthSource;
 use crate::virtual_midi::VirtualMidiOut;
 use crossbeam_channel::unbounded;
-use midi_core::instrument::Instrument;
-use midi_core::midi::MidiEvent;
 use midir::{Ignore, MidiInput, MidiInputConnection};
 use rodio::{OutputStream, Sink};
 use std::error::Error;
 use std::io::{Write, stdin, stdout};
+use wavesynth::instrument::Instrument;
+use wavesynth::midi::MidiEvent;
 
 const KEYBOARD_LAYOUT_HINT: &str = "\
 Computer-keyboard MIDI controller enabled. Key layout (one octave from C4):

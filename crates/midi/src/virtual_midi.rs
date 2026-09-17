@@ -1,9 +1,9 @@
 use crate::keyboard_midi::KeyboardState;
 use crossbeam_channel::Sender;
-use midi_core::midi::MidiEvent;
 use midir::os::unix::VirtualOutput;
 use midir::{MidiOutput, MidiOutputConnection};
 use thiserror::Error;
+use wavesynth::midi::MidiEvent;
 
 const VIRTUAL_PORT_NAME: &str = "Keyboard Synth";
 

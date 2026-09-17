@@ -1,6 +1,6 @@
-use midi_core::midi::MidiEvent;
 use rdev::{Event, EventType, Key};
 use std::collections::HashSet;
+use wavesynth::midi::MidiEvent;
 
 /// Maps a computer-keyboard key to a MIDI pitch, using a fixed
 /// one-octave piano layout starting at C4 (60):

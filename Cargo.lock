@@ -585,18 +585,11 @@ name = "midi"
 version = "0.1.0"
 dependencies = [
  "crossbeam-channel",
- "midi-core",
  "midir",
  "rdev",
  "rodio",
  "thiserror 2.0.18",
-]
-
-[[package]]
-name = "midi-core"
-version = "0.1.0"
-dependencies = [
- "libm",
+ "wavesynth",
 ]
 
 [[package]]
@@ -1173,6 +1166,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39129a682a6d2d841b6c429d0c51e5cb0ed1a03829d8b3d1e69a011e62cb3d3b"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "wavesynth"
+version = "0.1.0"
+dependencies = [
+ "libm",
 ]
 
 [[package]]

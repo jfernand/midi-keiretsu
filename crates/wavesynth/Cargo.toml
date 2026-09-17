@@ -1,5 +1,5 @@
 [package]
-name = "midi-core"
+name = "wavesynth"
 version = "0.1.0"
 edition = "2024"
 

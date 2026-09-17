@@ -1,9 +1,9 @@
 use crossbeam_channel::Receiver;
-use midi_core::engine::SynthEngine;
-use midi_core::instrument::Instrument;
-use midi_core::midi::MidiEvent;
 use rodio::Source;
 use std::time::Duration;
+use wavesynth::engine::SynthEngine;
+use wavesynth::instrument::Instrument;
+use wavesynth::midi::MidiEvent;
 
 pub struct SynthSource {
     engine: SynthEngine,
