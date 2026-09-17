@@ -2,6 +2,12 @@
 name = "wavesynth"
 version = "0.1.0"
 edition = "2024"
+description = "A no_std MIDI-driven synthesizer engine: oscillators, ADSR envelopes, a low-pass filter, and named instrument presets."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/jfernand/midi"
+readme = "README.md"
+keywords = ["synthesizer", "midi", "audio", "dsp", "embedded"]
+categories = ["no-std", "multimedia::audio"]
 
 [dependencies]
 libm = "0.2"
